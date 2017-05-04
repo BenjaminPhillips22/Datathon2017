@@ -204,11 +204,6 @@ g10
 ```
 
 
-```{r }
-
-
-```
-
 
 ### Conclusion
 
@@ -218,91 +213,4 @@ After some initial analysis, the plots exploring gender, socio-economic status a
 ### Reference
 
 (1) Beyond Blue.(2016) Antidepressant medication. Retrieved from http://resources.beyondblue.org.au/prism/file?token=BL/0125
-
-
-
-```{r }
-
-
-```
-
-
-```{r }
-
-```
-
-```{r , eval=FALSE}
-# for previous illness
-
-# chi-square test
-con <- df2 %>% filter(label==TRUE) %>% select(new_count)
-con <- c(24, sum(con$new_count)-24)
-#con <- con$new_count
-discon <- df2 %>% filter(label==FALSE) %>% select(new_count)
-discon <- c(110, sum(discon$new_count)-110)
-# discon <- discon$new_count
-icecream = as.data.frame(rbind(con, discon))
-# 
-# a <- df2 %>% filter(label==TRUE) %>% select(Chronics) %>% unique()
-# a <- a$Chronics
-names(icecream) = c('anti-coagulant','never taken anti-coagulant')
-
-# test the anti-coagulant hypothesis.
-
-
-chisq.test(icecream)
-
-```
-
-```{r , eval=FALSE}
-# gender
-#View(df1)
-# chi-square test
-con <- df1 %>% group_by(gender, label) %>% summarise(new_count = n()) %>% filter(label==TRUE) %>% select(new_count)
-con <- con$new_count
-discon <- df1 %>% group_by(gender, label) %>% summarise(new_count = n()) %>% filter(label==TRUE) %>% select(new_count)
-discon <- discon$new_count
-icecream = as.data.frame(rbind(con, discon))
-
-names(icecream) = c('F','M','U')
-chisq.test(icecream)
-```
-
-```{r }
-
-```
-
-```{r }
-
-
-```
-
-```{r }
-
-
-```
-
-
-```{r }
-
-
-```
-
-
-```{r }
-
-
-```
-
-
-```{r }
-
-
-```
-
-
-```{r }
-
-
-```
 
