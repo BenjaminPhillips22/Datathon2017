@@ -1,0 +1,132 @@
+---
+title: "Getting started with the 2017 datathon in R"
+author: "Ben Phillips"
+date: '`r paste("Date:",Sys.Date())`'
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+The size of the dataset can be a bit intimidating, but if you process it in small chunks, it becomes more managable.
+
+The first step is to define a function to process the data into the form we want. The data has been broken into smaller chunks, and although a patient may have many transaction records, for any patient, all their transaction records are located in one `patients_i.txt` file, and the corresponding `missing_patients_i.txt` file. This makes it very convenient to process the data bit by bit. 
+
+When generating your data, it's important to keep in mind that each patient counts as a single observation and should not appear more than once in the data you produce for modelling.
+
+The `R` libraries are:
+
+```{r, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(pROC)
+```
+
+Let's build the function
+
+```{r}
+make_features <- function(df, df_missing, chronic_lookup){
+  
+  df <- rbind(df,df_missing)
+  df <- df[!duplicated(df),]
+  df$Prescription_Week <- ymd(df$Prescription_Week)
+  df$Dispense_Week <- ymd(df$Dispense_Week)
+  
+  
+  # now merge with chronicIllness
+  df <- merge(x = df, y = chronic_lookup %>% 
+                select(ChronicIllness, MasterProductID),by.x = 'Drug_ID',by.y = 'MasterProductID', all.x = TRUE)
+  
+  # fill na with 'unknown'
+  df$ChronicIllness[is.na(df$ChronicIllness)] <- 'unknown'
+  
+  # first identify the patients that take diabetes medication is 2016
+  df <- df %>% 
+    mutate(diabetes_in_2016 = ifelse(ChronicIllness=='Diabetes' & Dispense_Week>=dmy('01-01-2016'), 1, 0))
+  
+  # our only feature will be if they took diabetes medication before 2016
+  # so we will define a column to help us with this
+  
+  df <- df %>% 
+    mutate(diabetes_before_2016 = ifelse(ChronicIllness=='Diabetes' & Dispense_Week<dmy('01-01-2016'), 1, 0))
+  
+  
+  unique_patients <- df %>% select(Patient_ID) %>% unique()
+  unique_patients_diabetes_before_2016 <- df %>% 
+    dplyr::filter(diabetes_before_2016 == 1) %>% 
+    select(Patient_ID) %>% unique() %>% mutate(diabetes_before_2016 = 1)
+  
+  unique_patients_diabetes_in_2016 <- df %>% 
+    dplyr::filter(diabetes_in_2016 == 1) %>% select(Patient_ID) %>% 
+    unique() %>% mutate(diabetes_in_2016 = 1)
+  
+  output_df <- merge(x = unique_patients, y =  unique_patients_diabetes_before_2016,
+                     by ='Patient_ID',all.x = TRUE)
+  output_df <- merge(x = output_df, y =  unique_patients_diabetes_in_2016, by ='Patient_ID', all.x = TRUE)
+  output_df[is.na(output_df)] <- 0
+  
+  return(output_df)
+}
+
+```
+
+After that function has been defined and tested, you can apply it to all your data. This might take about 30 minutes.
+
+```{r }
+
+# read in files
+chronic_lookup <- read.delim('ChronicIllness_LookUp.txt', fileEncoding="UTF-8-BOM", stringsAsFactors = FALSE)
+
+
+df_filename <- '/MelbDatathon2017/Transactions/patients_'
+df_missing_filename <- '/MelbDatathon2017/MISSING_TRANSACTIONS/missing_patients_'
+
+myList <- list()
+
+start_time <- Sys.time()
+
+for(i in 1:50){
+  
+  f1 <- paste(df_filename, i, '.txt', sep = '')
+  f2 <- paste(df_missing_filename, i, '.txt', sep = '')
+  
+  df <- read.delim(f1, fileEncoding="UTF-8-BOM", stringsAsFactors = FALSE)
+  df_missing <- read.delim(f2, fileEncoding="UTF-8-BOM", stringsAsFactors = FALSE)
+  
+  myList[[i]] <- make_features(df, df_missing, chronic_lookup)
+  
+}
+
+print(Sys.time() - start_time)
+
+output <- bind_rows(myList)
+View(output)
+
+write.csv(x = output, file ='your_amazing_data.csv', row.names = F)
+
+```
+
+Once you've got the data, you can begin your training. Remember, each row has features for one patient, and there are under 600,000 patients, so you won't break your computer by loading and training on this file. Here is a simple example to create a logistic regression model and estimate the accuracy of the model by calculating the AUC on the test data.
+
+```{r }
+
+training_data <- output[1:200000, ]
+test_data <- output[200001:279200,]
+kaggle_data <- output[279201:558352, ]
+
+model1 <- glm(training_data$diabetes_in_2016 ~ training_data$diabetes_before_2016)
+auc( test_data$diabetes_in_2016, predict(model1, data.frame(test_data$diabetes_before_2016)))
+
+result <- cbind(kaggle_data$Patient_ID, predict(model1, data.frame(kaggle_data$diabetes_before_2016)))
+write.csv('your_amazing_result_to_submit_to_kaggle.csv', row.names = FALSE)
+
+```
+
+**Where to from here?**
+
+Think of some features that might be useful in predicting diabetes and rewrite the code in the `make_features` function to include your new ideas. You can read in a single transaction file to test if it works before running it across all fifty files.
+
+Good luck!
