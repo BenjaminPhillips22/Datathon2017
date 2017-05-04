@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 ### Ben Phillips 
 benjamin.phillips22@gmail.com
 
-To see the code that produced this report;
+To see this report with all it's graphs and colour;
 https://github.com/BenjaminPhillips22/Datathon2017
 
 
