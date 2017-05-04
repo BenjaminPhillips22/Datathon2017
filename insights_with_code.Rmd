@@ -1,0 +1,308 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+```
+
+# 2017 Melbourne Datathon
+### Predicting Depression Medication Discontinuation
+
+### Ben Phillips 
+benjamin.phillips22@gmail.com
+
+This report explores the question;
+
+**Is it possible to predict if a patient will stop their depression medication early?**
+
+The result of the analysis undertaken thus far, indicates that it may be possible to predict if a patient will stop their medication early based on their previous medication history.
+
+According to Beyond Blue, an independent Australian non-profit organization that tackles issues surrounding mental illness ("Antidepressant medication", 2016), people diagnosed with depression are prescribed medication for up to 6-12 months. 
+
+This analysis indicates that many of these people discontinue their treatment within just 1-3 months. The reason for this is thought to be that while the positive effects of the medication take up to 6 weeks to begin to be felt, and up to 6 months to reach maximum effectiveness, the negative side effects can be felt much earlier. Using several years of previous medication history, it can be seen that there is some evidence to conclude that it is possible to predict if a patient will stop their depression medication early.
+
+**How were patients that discontinued their treatment determined?**
+
+Patients that have been dispenesed medication that will last for 3 months or less, and then stopped their treatment, were considered to have disconinued their treatment, while these that had taken their medication for 6 months or more were considered to have stayed with their treatment. This does leave a group of patients, having taken medication for 4 and 5 months out of the analysis, but this was seen as a better outcome than to pick a strict length of time, where similar patients on either side of the definition being defined differently.
+
+The analysis is on a subset of the overall data. It focuses only on patients that were first dispensed medication for depression in the year 2013.
+
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+```
+
+
+```{r, cache=TRUE}
+df <- read.csv("C:/Users/ben/Desktop/MelbDatathon2017/insights/depression_dataset_better.csv", stringsAsFactors = FALSE)
+df$start <- ymd(df$start)
+df$end <- ymd(df$end)
+```
+
+
+Figure 1 shows the length of time, in months, that a patient was able to take their prescribed medication for. It takes into account the last time they were dispensed medication and the length of time that that last dispensed medication should last for. A large number of patients are dispensed enough medication to last less than three before discontinuing their treatment. Others may wait a few more months before discontinuing their treatment. After six months, patients are less likely to stop their treatment. This plot doesn't show the large group of patients that continue to take depression medication for many years.
+
+
+```{r , fig.width=10, fig.height=6, fig.cap="Figure 1"}
+g2_data <- df %>% group_by(time) %>% summarise(count = n()) 
+g2 <- ggplot(data = g2_data, mapping = aes(x = time, y = count)) +
+  geom_bar(stat = 'identity', colour = 'black', fill = 'lightblue', alpha = .6) + 
+  scale_x_continuous(breaks = c(6,12,18,24), limits = c(0,25)) +
+  labs(x = 'time (months)', y = 'Patient Count', title = 'How long do patients take their depression medication?') + 
+  theme_dark() +
+  theme(plot.title = element_text(size=22), 
+        axis.text.x = element_text(size=14), 
+        axis.title.y = element_text(size=14), 
+        axis.title.x = element_text(size=15), 
+        axis.text.y = element_text(size=15))
+  
+g2
+
+```
+
+
+Before running statical tests, we can look to see if there are any trends in the data.
+Figure 2 reveals an interesting trend regarding the month the patient was first dispensed their medication. It appears that the first month of every season is the most popular month to first be dispensed medication for depression.
+
+Figure 3 informs us that even though some months may be over represented in first being dispensed depression medication, the month you start your medication doesn't affect your chance of discontinuing your treatment.
+
+
+```{r , fig.width=10, fig.height=6, fig.cap="Figure 2"}
+g3 <- ggplot(data = df, mapping = aes(x = factor(month.abb[month(start)], levels = month.abb[1:12]))) +
+  geom_bar(size = 1.1, colour = 'white') + 
+  labs(x = 'months', y = 'Patient Count', title = 'First instance of depression medication dispensed (2013)') + 
+  theme_dark()+
+  theme(plot.title = element_text(size=22), 
+        axis.text.x = element_text(size=14), 
+        axis.title.y = element_text(size=14), 
+        axis.title.x = element_text(size=15), 
+        axis.text.y = element_text(size=15))
+g3
+
+
+```
+
+
+```{r , fig.width=10, fig.height=6, fig.cap="Figure 3"}
+
+df1 <- df %>%
+  filter(time<=3 | time>=6) %>%
+  mutate(label = ifelse(time<=3, TRUE, FALSE))
+
+g3 <- ggplot(data = df1, mapping = aes(x = factor(month.abb[month(start)], levels = month.abb[1:12]), colour = factor(label, labels = c("Continued", "Discontinued")))) +
+  geom_bar(position = 'fill', size = 1.1) + 
+  labs(x = 'months', y = 'Patient Count', title = 'First instance of depression medication dispensed (2013)', colour = '') + 
+  theme_dark()+
+  theme(plot.title = element_text(size=22), 
+        axis.text.x = element_text(size=14), 
+        axis.title.y = element_text(size=14), 
+        axis.title.x = element_text(size=15), 
+        axis.text.y = element_text(size=15),
+        legend.text=element_text(size=15))
+g3
+#View(df)
+
+```
+
+Figure 4 indicates that females are significantly more likely to be diagnosed with depression compared to males. In figure 5, although males are slightly over represented in the discontinue group compared to females, this difference is not statistically significant.
+
+
+```{r , fig.width=10, fig.height=6, fig.cap="Figure 4"}
+
+
+g5 <- ggplot(data = df1, mapping = aes(x = gender)) +
+  geom_bar(position = position_stack(), colour = 'white', width = .5, size = 1.1) +
+  labs(x = 'Gender', y = 'Count', title = 'Gender distribution') + 
+  theme_dark()+
+  theme(plot.title = element_text(size=22), 
+        axis.text.x = element_text(size=14), 
+        axis.title.y = element_text(size=14), 
+        axis.title.x = element_text(size=15), 
+        axis.text.y = element_text(size=15))
+g5
+
+
+```
+
+
+```{r , fig.width=10, fig.height=6, fig.cap="Figure 5"}
+g6 <- ggplot(data = df1, mapping = aes(x = gender, colour = factor(label, labels = c("Continued", "Discontinued")))) +
+  geom_bar(position = 'fill', size = 1.1, width = 0.5) +
+  labs(y = 'Percent %', x = 'Gender', title = 'No gender is more or less likely to discontinue their medication', colour = '') + 
+  theme_dark()+
+  theme(plot.title = element_text(size=22), 
+        axis.text.x = element_text(size=14), 
+        axis.title.y = element_text(size=14), 
+        axis.title.x = element_text(size=15), 
+        axis.text.y = element_text(size=15),
+        legend.text=element_text(size=15))
+g6
+
+```
+
+Similar to Figure 5, Figure 6 shows some slight differences between the groups, but doesn't reveal any trends worth investigating in the different Socio-Economic deciles.
+
+
+```{r , fig.width=10, fig.height=6, fig.cap="Figure 6"}
+g7_data <- df1 %>% 
+  group_by(Decile.Index.of.Relative.Socio.economic.Advantage.and.Disadvantage, label) %>%
+  summarise(count = n())
+
+
+# now percentages
+
+g8 <- ggplot(data = g7_data, mapping = aes(x = Decile.Index.of.Relative.Socio.economic.Advantage.and.Disadvantage, y = count, colour = factor(label, labels = c("Continued", "Discontinued")))) +
+  geom_bar(stat = 'identity', position = 'fill', size = 1.1) + 
+  labs(y = 'percent') +
+  theme_dark() +
+  labs(x = 'Socio-Economic Status (decile)', y = 'Percent %', title = 'No SES group is more or less likely to discontinue their medication', colour = '')+
+  theme(plot.title = element_text(size=22), 
+        axis.text.x = element_text(size=14), 
+        axis.title.y = element_text(size=14), 
+        axis.title.x = element_text(size=15), 
+        axis.text.y = element_text(size=15),
+        legend.text=element_text(size=15))
+g8
+
+
+```
+
+
+Lastly, previous medication history is taking into account. Figure 7 shows that previously being anti-coagulant medication may affect your chances of sticking with the depression medication. This observation is further supported by a chi-squared test, with a p-value of p<0.01 suggesting that there is significant evidence to reject the null hypothesis, the having previously taken anti-coagulant medication has no effect.
+
+
+```{r , fig.width=10, fig.height=6, fig.cap="Figure 7"}
+# look at medications next.
+# I want to replace the counts of the medication with a 1 or 0
+columns_to_change <- df1 %>% select(Anti.Coagulant:Urology, -Depression) %>% colnames()
+df2 <- df1
+df2[,columns_to_change] <- apply(X = df2[,columns_to_change], MARGIN = 2, FUN = function(i){ifelse(i>=1, 1, 0)})
+df2 <- df2[,c(columns_to_change, "Patient_ID",'label')] %>% 
+  gather(key = Chronics, value = count, -label, -Patient_ID) %>%
+  group_by(Chronics, label) %>%
+  summarise(new_count = sum(count))
+df2[df2$Chronics=="Chronic.Obstructive.Pulmonary.Disease..COPD.",'Chronics'] <- 'COPD'
+
+g10 <- ggplot(data = df2, mapping = aes(x = Chronics, y = new_count, colour = factor(label, labels = c("Continued", "Discontinued")))) +
+  geom_bar(stat = 'identity', position = 'fill', size = 1.1) + 
+  labs(x = 'Illness', y = 'Percent %', colour = '', title = "Does previous illness uncover patients more likely to discontinue?")+
+  theme_dark()+
+  theme(plot.title = element_text(size=22), 
+        axis.text.x = element_text(size=14, angle = 45, hjust = 1), 
+        axis.title.y = element_text(size=14), 
+        axis.title.x = element_text(size=15), 
+        axis.text.y = element_text(size=15),
+        legend.text=element_text(size=15))
+g10
+
+```
+
+
+```{r }
+
+
+```
+
+
+### Conclusion
+
+After some initial analysis, the plots exploring gender, socio-economic status and starting month don't give us any indication that it is possible to predict which patients will discontinue their depression treatment. Of the ten previous chronic illness types in the dataset, there is statistical evidence that patients who have previously been dispensed anti-coagulant medication are more likely to discontinue their depression medication. While this investigation has found one key predictor, further analysis with this dataset exploring relationships between dependent variables or other datasets may yet uncover more predictors.
+
+
+# Reference
+
+(1) Beyond Blue.(2016) Antidepressant medication. Retrieved from http://resources.beyondblue.org.au/prism/file?token=BL/0125
+
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+```
+
+```{r , eval=FALSE}
+# for previous illness
+
+# chi-square test
+con <- df2 %>% filter(label==TRUE) %>% select(new_count)
+con <- c(24, sum(con$new_count)-24)
+#con <- con$new_count
+discon <- df2 %>% filter(label==FALSE) %>% select(new_count)
+discon <- c(110, sum(discon$new_count)-110)
+# discon <- discon$new_count
+icecream = as.data.frame(rbind(con, discon))
+# 
+# a <- df2 %>% filter(label==TRUE) %>% select(Chronics) %>% unique()
+# a <- a$Chronics
+names(icecream) = c('anti-coagulant','never taken anti-coagulant')
+
+# test the anti-coagulant hypothesis.
+
+
+chisq.test(icecream)
+
+```
+
+```{r , eval=FALSE}
+# gender
+#View(df1)
+# chi-square test
+con <- df1 %>% group_by(gender, label) %>% summarise(new_count = n()) %>% filter(label==TRUE) %>% select(new_count)
+con <- con$new_count
+discon <- df1 %>% group_by(gender, label) %>% summarise(new_count = n()) %>% filter(label==TRUE) %>% select(new_count)
+discon <- discon$new_count
+icecream = as.data.frame(rbind(con, discon))
+
+names(icecream) = c('F','M','U')
+chisq.test(icecream)
+```
+
+```{r }
+
+```
+
+```{r }
+
+
+```
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
