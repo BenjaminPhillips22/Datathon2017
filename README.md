@@ -1,6 +1,6 @@
 
 
-Melbourne 2017 Datathon
+### Melbourne 2017 Datathon
 
 Here is a quick guide to help people get started in the kaggle competition.
 
@@ -13,4 +13,4 @@ Here is my submission for the insight report. You can find the code that produce
 Coming soon. The code used to generate the data for the report. 
  
  
- - Ben Phillips
+ Ben Phillips
